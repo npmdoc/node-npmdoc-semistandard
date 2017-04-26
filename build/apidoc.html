@@ -51,7 +51,7 @@
 
         href="https://github.com/Flet/semistandard"
 
-    >semistandard (v10.0.0)</a>
+    >semistandard (v11.0.0)</a>
 </h1>
 <h4>All the goodness of `feross/standard` with semicolons sprinkled on top.</h4>
 <div class="apidocSectionDiv"><a
@@ -424,6 +424,15 @@
 
         <li>
 
+            <a class="apidocElementLiA" href="#apidoc.element.semistandard.eslint.SourceCode.prototype.getIndexFromLoc">
+            function <span class="apidocSignatureSpan">semistandard.eslint.SourceCode.prototype.</span>getIndexFromLoc
+            <span class="apidocSignatureSpan">(loc)</span>
+            </a>
+
+        </li>
+
+        <li>
+
             <a class="apidocElementLiA" href="#apidoc.element.semistandard.eslint.SourceCode.prototype.getJSDocComment">
             function <span class="apidocSignatureSpan">semistandard.eslint.SourceCode.prototype.</span>getJSDocComment
             <span class="apidocSignatureSpan">(node)</span>
@@ -436,6 +445,15 @@
             <a class="apidocElementLiA" href="#apidoc.element.semistandard.eslint.SourceCode.prototype.getLines">
             function <span class="apidocSignatureSpan">semistandard.eslint.SourceCode.prototype.</span>getLines
             <span class="apidocSignatureSpan">()</span>
+            </a>
+
+        </li>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.semistandard.eslint.SourceCode.prototype.getLocFromIndex">
+            function <span class="apidocSignatureSpan">semistandard.eslint.SourceCode.prototype.</span>getLocFromIndex
+            <span class="apidocSignatureSpan">(index)</span>
             </a>
 
         </li>
@@ -743,12 +761,6 @@
 
         <li>
 
-            <span class="apidocSignatureSpan">number <span class="apidocSignatureSpan">semistandard.eslint.linter.</span>_maxListeners</span>
-
-        </li>
-
-        <li>
-
             <span class="apidocSignatureSpan">string <span class="apidocSignatureSpan">semistandard.eslint.linter.</span>version</span>
 
         </li>
@@ -832,6 +844,12 @@
         lodash.cloneDeep(defaultConfig),
         testerConfig
     );
+
+    /**
+     * Rule definitions to define before tests.
+     * @type {Object}
+     */
+    this.rules = {};
 }</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
@@ -872,23 +890,35 @@
      * This is done to avoid each rule needing to do so separately.
      * @type string[]
      */
-    this.lines = SourceCode.splitLines(this.text);
+    this.lines = [];
+    this.lineStartIndices = [0];
 
-    this.tokensAndComments = ast.tokens
-        .concat(ast.comments)
-        .sort((left, right) =&#x3e; left.range[0] - right.range[0]);
+    const lineEndingPattern = astUtils.createGlobalLinebreakMatcher();
+    let match;
+
+    /*
+     * Previously, this was implemented using a regex that
+     * matched a sequence of non-linebreak characters followed by a
+     * linebreak, then adding the lengths of the matches. However,
+     * this caused a catastrophic backtracking issue when the end
+     * of a file contained a large number of non-newline characters.
+     * To avoid this, the current implementation just matches newlines
+     * and uses match.index to get the correct line start indices.
+     */
+    while ((match = lineEndingPattern.exec(this.text))) {
+        this.lines.push(this.text.slice(this.lineStartIndices[this.lineStartIndices.length - 1], match.index));
+        this.lineStartIndices.push(match.index + match[0].length);
+    }
+    this.lines.push(this.text.slice(this.lineStartIndices[this.lineStartIndices.length - 1]));
+
+    this.tokensAndComments = sortedMerge(ast.tokens, ast.comments);
 
     // create token store methods
-    const tokenStore = createTokenStore(ast.tokens);
+    const tokenStore = new TokenStore(ast.tokens, ast.comments);
 
-    Object.keys(tokenStore).forEach(methodName =&#x3e; {
-        this[methodName] = tokenStore[methodName];
-    });
-
-    const tokensAndCommentsStore = createTokenStore(this.tokensAndComments);
-
-    this.getTokenOrCommentBefore = tokensAndCommentsStore.getTokenBefore;
-    this.getTokenOrCommentAfter = tokensAndCommentsStore.getTokenAfter;
+    for (const methodName of TokenStore.PUBLIC_METHODS) {
+        this[methodName] = tokenStore[methodName].bind(tokenStore);
+    }
 
     // don&#x27;t allow modification of this object
     Object.freeze(this);
@@ -989,6 +1019,12 @@
         lodash.cloneDeep(defaultConfig),
         testerConfig
     );
+
+    /**
+     * Rule definitions to define before tests.
+     * @type {Object}
+     */
+    this.rules = {};
 }</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
@@ -1029,23 +1065,35 @@
      * This is done to avoid each rule needing to do so separately.
      * @type string[]
      */
-    this.lines = SourceCode.splitLines(this.text);
+    this.lines = [];
+    this.lineStartIndices = [0];
 
-    this.tokensAndComments = ast.tokens
-        .concat(ast.comments)
-        .sort((left, right) =&#x3e; left.range[0] - right.range[0]);
+    const lineEndingPattern = astUtils.createGlobalLinebreakMatcher();
+    let match;
+
+    /*
+     * Previously, this was implemented using a regex that
+     * matched a sequence of non-linebreak characters followed by a
+     * linebreak, then adding the lengths of the matches. However,
+     * this caused a catastrophic backtracking issue when the end
+     * of a file contained a large number of non-newline characters.
+     * To avoid this, the current implementation just matches newlines
+     * and uses match.index to get the correct line start indices.
+     */
+    while ((match = lineEndingPattern.exec(this.text))) {
+        this.lines.push(this.text.slice(this.lineStartIndices[this.lineStartIndices.length - 1], match.index));
+        this.lineStartIndices.push(match.index + match[0].length);
+    }
+    this.lines.push(this.text.slice(this.lineStartIndices[this.lineStartIndices.length - 1]));
+
+    this.tokensAndComments = sortedMerge(ast.tokens, ast.comments);
 
     // create token store methods
-    const tokenStore = createTokenStore(ast.tokens);
+    const tokenStore = new TokenStore(ast.tokens, ast.comments);
 
-    Object.keys(tokenStore).forEach(methodName =&#x3e; {
-        this[methodName] = tokenStore[methodName];
-    });
-
-    const tokensAndCommentsStore = createTokenStore(this.tokensAndComments);
-
-    this.getTokenOrCommentBefore = tokensAndCommentsStore.getTokenBefore;
-    this.getTokenOrCommentAfter = tokensAndCommentsStore.getTokenAfter;
+    for (const methodName of TokenStore.PUBLIC_METHODS) {
+        this[methodName] = tokenStore[methodName].bind(tokenStore);
+    }
 
     // don&#x27;t allow modification of this object
     Object.freeze(this);
@@ -1577,6 +1625,12 @@
         lodash.cloneDeep(defaultConfig),
         testerConfig
     );
+
+    /**
+     * Rule definitions to define before tests.
+     * @type {Object}
+     */
+    this.rules = {};
 }</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
@@ -1677,7 +1731,7 @@
     </h2>
     <ul>
     <li>description and source-code<pre class="apidocCodePre">defineRule(name, rule) {
-    eslint.defineRule(name, rule);
+    this.rules[name] = rule;
 }</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
@@ -1779,12 +1833,13 @@
          * running the rule under test.
          */
         eslint.reset();
+
         eslint.on(&#x22;Program&#x22;, node =&#x3e; {
             beforeAST = cloneDeeplyExcludesParent(node);
+        });
 
-            eslint.on(&#x22;Program:exit&#x22;, node =&#x3e; {
-                afterAST = cloneDeeplyExcludesParent(node);
-            });
+        eslint.on(&#x22;Program:exit&#x22;, node =&#x3e; {
+            afterAST = node;
         });
 
         // Freezes rule-context properties.
@@ -1821,7 +1876,7 @@
             return {
                 messages: eslint.verify(code, config, filename, true),
                 beforeAST,
-                afterAST
+                afterAST: cloneDeeplyExcludesParent(afterAST)
             };
         } finally { ...</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
@@ -1868,23 +1923,35 @@
      * This is done to avoid each rule needing to do so separately.
      * @type string[]
      */
-    this.lines = SourceCode.splitLines(this.text);
+    this.lines = [];
+    this.lineStartIndices = [0];
 
-    this.tokensAndComments = ast.tokens
-        .concat(ast.comments)
-        .sort((left, right) =&#x3e; left.range[0] - right.range[0]);
+    const lineEndingPattern = astUtils.createGlobalLinebreakMatcher();
+    let match;
+
+    /*
+     * Previously, this was implemented using a regex that
+     * matched a sequence of non-linebreak characters followed by a
+     * linebreak, then adding the lengths of the matches. However,
+     * this caused a catastrophic backtracking issue when the end
+     * of a file contained a large number of non-newline characters.
+     * To avoid this, the current implementation just matches newlines
+     * and uses match.index to get the correct line start indices.
+     */
+    while ((match = lineEndingPattern.exec(this.text))) {
+        this.lines.push(this.text.slice(this.lineStartIndices[this.lineStartIndices.length - 1], match.index));
+        this.lineStartIndices.push(match.index + match[0].length);
+    }
+    this.lines.push(this.text.slice(this.lineStartIndices[this.lineStartIndices.length - 1]));
+
+    this.tokensAndComments = sortedMerge(ast.tokens, ast.comments);
 
     // create token store methods
-    const tokenStore = createTokenStore(ast.tokens);
+    const tokenStore = new TokenStore(ast.tokens, ast.comments);
 
-    Object.keys(tokenStore).forEach(methodName =&#x3e; {
-        this[methodName] = tokenStore[methodName];
-    });
-
-    const tokensAndCommentsStore = createTokenStore(this.tokensAndComments);
-
-    this.getTokenOrCommentBefore = tokensAndCommentsStore.getTokenBefore;
-    this.getTokenOrCommentAfter = tokensAndCommentsStore.getTokenAfter;
+    for (const methodName of TokenStore.PUBLIC_METHODS) {
+        this[methodName] = tokenStore[methodName].bind(tokenStore);
+    }
 
     // don&#x27;t allow modification of this object
     Object.freeze(this);
@@ -1903,7 +1970,7 @@
     </h2>
     <ul>
     <li>description and source-code<pre class="apidocCodePre">splitLines = function (text) {
-    return text.split(/\r\n|\r|\n|\u2028|\u2029/g);
+    return text.split(astUtils.createGlobalLinebreakMatcher());
 }</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
@@ -1949,23 +2016,35 @@
      * This is done to avoid each rule needing to do so separately.
      * @type string[]
      */
-    this.lines = SourceCode.splitLines(this.text);
+    this.lines = [];
+    this.lineStartIndices = [0];
 
-    this.tokensAndComments = ast.tokens
-        .concat(ast.comments)
-        .sort((left, right) =&#x3e; left.range[0] - right.range[0]);
+    const lineEndingPattern = astUtils.createGlobalLinebreakMatcher();
+    let match;
+
+    /*
+     * Previously, this was implemented using a regex that
+     * matched a sequence of non-linebreak characters followed by a
+     * linebreak, then adding the lengths of the matches. However,
+     * this caused a catastrophic backtracking issue when the end
+     * of a file contained a large number of non-newline characters.
+     * To avoid this, the current implementation just matches newlines
+     * and uses match.index to get the correct line start indices.
+     */
+    while ((match = lineEndingPattern.exec(this.text))) {
+        this.lines.push(this.text.slice(this.lineStartIndices[this.lineStartIndices.length - 1], match.index));
+        this.lineStartIndices.push(match.index + match[0].length);
+    }
+    this.lines.push(this.text.slice(this.lineStartIndices[this.lineStartIndices.length - 1]));
+
+    this.tokensAndComments = sortedMerge(ast.tokens, ast.comments);
 
     // create token store methods
-    const tokenStore = createTokenStore(ast.tokens);
+    const tokenStore = new TokenStore(ast.tokens, ast.comments);
 
-    Object.keys(tokenStore).forEach(methodName =&#x3e; {
-        this[methodName] = tokenStore[methodName];
-    });
-
-    const tokensAndCommentsStore = createTokenStore(this.tokensAndComments);
-
-    this.getTokenOrCommentBefore = tokensAndCommentsStore.getTokenBefore;
-    this.getTokenOrCommentAfter = tokensAndCommentsStore.getTokenAfter;
+    for (const methodName of TokenStore.PUBLIC_METHODS) {
+        this[methodName] = tokenStore[methodName].bind(tokenStore);
+    }
 
     // don&#x27;t allow modification of this object
     Object.freeze(this);
@@ -2018,6 +2097,54 @@
         leading: leadingComments,
         trailing: trailingComments
     };
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+
+    <h2>
+        <a href="#apidoc.element.semistandard.eslint.SourceCode.prototype.getIndexFromLoc" id="apidoc.element.semistandard.eslint.SourceCode.prototype.getIndexFromLoc">
+        function <span class="apidocSignatureSpan">semistandard.eslint.SourceCode.prototype.</span>getIndexFromLoc
+        <span class="apidocSignatureSpan">(loc)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">getIndexFromLoc(loc) {
+    if (typeof loc !== &#x22;object&#x22; || typeof loc.line !== &#x22;number&#x22; || typeof loc.column !== &#x22;number&#x22;) {
+        throw new TypeError(&#x22;Expected `loc` to be an object with numeric `line` and `column` properties.&#x22;);
+    }
+
+    if (loc.line &#x3c;= 0) {
+        throw new RangeError(`Line number out of range (line ${loc.line} requested). Line numbers should be 1-based.`);
+    }
+
+    if (loc.line &#x3e; this.lineStartIndices.length) {
+        throw new RangeError(`Line number out of range (line ${loc.line} requested, but only ${this.lineStartIndices.length} lines
+ present).`);
+    }
+
+    const lineStartIndex = this.lineStartIndices[loc.line - 1];
+    const lineEndIndex = loc.line === this.lineStartIndices.length ? this.text.length : this.lineStartIndices[loc.line];
+    const positionIndex = lineStartIndex + loc.column;
+
+<span class="apidocCodeCommentSpan">    /*
+     * By design, getIndexFromLoc({ line: lineNum, column: 0 }) should return the start index of
+     * the given line, provided that the line number is valid element of this.lines. Since the
+     * last element of this.lines is an empty string for files with trailing newlines, add a
+     * special case where getting the index for the first location after the end of the file
+     * will return the length of the file, rather than throwing an error. This allows rules to
+     * use getIndexFromLoc consistently without worrying about edge cases at the end of a file.
+     */
+</span>    if (
+        loc.line === this.lineStartIndices.length &#x26;&#x26; positionIndex &#x3e; lineEndIndex ||
+        loc.line &#x3c; this.lineStartIndices.length &#x26;&#x26; positionIndex &#x3e;= lineEndIndex
+    ) {
+        throw new RangeError(`Column number out of range (column ${loc.column} requested, but the length of line ${loc.line} is ${
+lineEndIndex - lineStartIndex}).`);
+    }
+
+    return positionIndex;
 }</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
@@ -2081,6 +2208,47 @@ parent.type !== &#x22;Property&#x22;) {
     <ul>
     <li>description and source-code<pre class="apidocCodePre">getLines() {
     return this.lines;
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+
+    <h2>
+        <a href="#apidoc.element.semistandard.eslint.SourceCode.prototype.getLocFromIndex" id="apidoc.element.semistandard.eslint.SourceCode.prototype.getLocFromIndex">
+        function <span class="apidocSignatureSpan">semistandard.eslint.SourceCode.prototype.</span>getLocFromIndex
+        <span class="apidocSignatureSpan">(index)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">getLocFromIndex(index) {
+    if (typeof index !== &#x22;number&#x22;) {
+        throw new TypeError(&#x22;Expected `index` to be a number.&#x22;);
+    }
+
+    if (index &#x3c; 0 || index &#x3e; this.text.length) {
+        throw new RangeError(`Index out of range (requested index ${index}, but source text has length ${this.text.length}).`);
+    }
+
+<span class="apidocCodeCommentSpan">    /*
+     * For an argument of this.text.length, return the location one &#x22;spot&#x22; past the last character
+     * of the file. If the last character is a linebreak, the location will be column 0 of the next
+     * line; otherwise, the location will be in the next column on the same line.
+     *
+     * See getIndexFromLoc for the motivation for this special case.
+     */
+</span>    if (index === this.text.length) {
+        return { line: this.lines.length, column: this.lines[this.lines.length - 1].length };
+    }
+
+    /*
+     * To figure out which line rangeIndex is on, determine the last index at which rangeIndex could
+     * be inserted into lineIndices to keep the list sorted.
+     */
+    const lineNumber = lodash.sortedLastIndex(this.lineStartIndices, index);
+
+    return { line: lineNumber, column: index - this.lineStartIndices[lineNumber - 1] };
+
 }</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
@@ -2173,7 +2341,7 @@ parent.type !== &#x22;Property&#x22;) {
     </h2>
     <ul>
     <li>description and source-code<pre class="apidocCodePre">defaults = function () {
-    return require(&#x22;../conf/eslint.json&#x22;);
+    return require(&#x22;../conf/eslint-recommended&#x22;);
 }</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
@@ -2814,17 +2982,18 @@ parent.type !== &#x22;Property&#x22;) {
     // search and apply &#x22;eslint-env *&#x22;.
     const envInFile = findEslintEnv(text || textOrSourceCode.text);
 
+    config = Object.assign({}, config);
+
     if (envInFile) {
-        if (!config || !config.env) {
-            config = Object.assign({}, config || {}, { env: envInFile });
-        } else {
-            config = Object.assign({}, config);
+        if (config.env) {
             config.env = Object.assign({}, config.env, envInFile);
+        } else {
+            config.env = envInFile;
         }
     }
 
     // process initial config to make it safe to extend
-    config = prepareConfig(config || {});
+    config = prepareConfig(config);
 
     // only do this for text
     if (text !== null) {
@@ -2900,25 +3069,25 @@ parent.type !== &#x22;Property&#x22;) {
                     (parseResult &#x26;&#x26; parseResult.services ? parseResult.services : {})
                 );
 
-                const rule = ruleCreator.create ? ruleCreator.create(ruleContext) :
-                    ruleCreator(ruleContext);
+                const rule = ruleCreator.create ? ruleCreator.create(ruleContext)
+                    : ruleCreator(ruleContext);
 
-                // add all the node types as listeners
-                Object.keys(rule).forEach(nodeType =&#x3e; {
-                    api.on(nodeType, timing.enabled
-                        ? timing.time(key, rule[nodeType])
-                        : rule[nodeType]
+                // add all the selectors from the rule as listeners
+                Object.keys(rule).forEach(selector =&#x3e; {
+                    api.on(selector, timing.enabled
+                        ? timing.time(key, rule[selector])
+                        : rule[selector]
                     );
                 });
             } catch (ex) {
                 ex.message = `Error while loading rule &#x27;${key}&#x27;: ${ex.message}`;
                 throw ex;
             }
-        }); ...</pre></li>
+        });
+
+        // save config so rules can access as necess ...</pre></li>
     <li>example usage<pre class="apidocCodePre">n/a</pre></li>
     </ul>
-
-
 
 
 

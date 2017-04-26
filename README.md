@@ -1,6 +1,6 @@
 # npmdoc-semistandard
 
-#### api documentation for  [semistandard (v10.0.0)](https://github.com/Flet/semistandard)  [![npm package](https://img.shields.io/npm/v/npmdoc-semistandard.svg?style=flat-square)](https://www.npmjs.org/package/npmdoc-semistandard) [![travis-ci.org build-status](https://api.travis-ci.org/npmdoc/node-npmdoc-semistandard.svg)](https://travis-ci.org/npmdoc/node-npmdoc-semistandard)
+#### basic api documentation for  [semistandard (v11.0.0)](https://github.com/Flet/semistandard)  [![npm package](https://img.shields.io/npm/v/npmdoc-semistandard.svg?style=flat-square)](https://www.npmjs.org/package/npmdoc-semistandard) [![travis-ci.org build-status](https://api.travis-ci.org/npmdoc/node-npmdoc-semistandard.svg)](https://travis-ci.org/npmdoc/node-npmdoc-semistandard)
 
 #### All the goodness of `feross/standard` with semicolons sprinkled on top.
 
@@ -32,14 +32,16 @@
         "url": "https://github.com/Flet/semistandard/issues"
     },
     "dependencies": {
-        "eslint": "~3.15.0",
-        "eslint-config-semistandard": "8.0.0",
-        "eslint-config-standard": "7.0.0",
-        "eslint-config-standard-jsx": "3.3.0",
-        "eslint-plugin-promise": "~3.4.0",
-        "eslint-plugin-react": "~6.9.0",
-        "eslint-plugin-standard": "~2.0.1",
-        "standard-engine": "~5.4.0"
+        "eslint": "~3.19.0",
+        "eslint-config-semistandard": "^11.0.0",
+        "eslint-config-standard": "^10.2.1",
+        "eslint-config-standard-jsx": "4.0.1",
+        "eslint-plugin-import": "~2.2.0",
+        "eslint-plugin-node": "~4.2.2",
+        "eslint-plugin-promise": "~3.5.0",
+        "eslint-plugin-react": "~6.10.0",
+        "eslint-plugin-standard": "~3.0.1",
+        "standard-engine": "~7.0.0"
     },
     "description": "All the goodness of 'feross/standard' with semicolons sprinkled on top.",
     "devDependencies": {
@@ -47,16 +49,16 @@
         "mkdirp": "^0.5.1",
         "rimraf": "^2.5.4",
         "run-series": "^1.1.1",
-        "standard": "^8.6.0",
+        "standard": "^10.0.0",
         "tape": "^4.6.3",
         "xtend": "^4.0.0"
     },
     "directories": {},
     "dist": {
-        "shasum": "d6894f7673b9b737c262dca94cadf35e8392dde9",
-        "tarball": "https://registry.npmjs.org/semistandard/-/semistandard-10.0.0.tgz"
+        "shasum": "d2d9fc8ac393de21312195e006e50c8861391c47",
+        "tarball": "https://registry.npmjs.org/semistandard/-/semistandard-11.0.0.tgz"
     },
-    "gitHead": "a888e2f74c5e75c00a1df7df4ef4509ebb2871c0",
+    "gitHead": "89bafb7187c9db30fc0b4d1c4de0010a2f5145d1",
     "homepage": "https://github.com/Flet/semistandard",
     "keywords": [
         "JavaScript Standard Style",
@@ -104,7 +106,7 @@
     "standard": {
         "ignore": "tmp/**"
     },
-    "version": "10.0.0"
+    "version": "11.0.0"
 }
 ```
 
